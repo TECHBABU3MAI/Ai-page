@@ -21,6 +21,18 @@ jobs:
       run: |
         sudo apt update
         sudo apt install -y git zip unzip autoconf libtool libtool-bin m4 pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libncurses-dev cmake libffi-dev libssl-dev
+
+    - name: Set up Android SDK
+      run: |
+        sudo apt-get install -y android-sdk build-essential
+
+    - name: Install Android build-tools
+      run: |
+        yes | sdkmanager --licenses
+        sdkmanager "build-tools;33.0.0" "platform-tools" "platforms;android-33"
+
+    - name: Install Python packages
+      run: |
         pip install --user --upgrade buildozer cython virtualenv
 
     - name: Build with Buildozer
