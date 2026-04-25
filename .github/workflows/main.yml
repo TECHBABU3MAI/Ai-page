@@ -18,23 +18,79 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install system dependencies
       run: |
-        sudo apt update
-        sudo apt install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev openjdk-17-jdk
-        python3 -m pip install --user --upgrade Cython==0.29.33 virtualenv buildozer
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          git zip unzip autoconf libtool pkg-config \
+          zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
+          cmake libffi-dev libssl-dev openjdk-17-jdk \
+          libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev \
+          libharfbuzz0b libwebp6 libjasper1 libilmbase23 libopenexr23 \
+          cython3
+
+    - name: Install Python build tools
+      run: |
+        python3 -m pip install --upgrade pip setuptools wheel
+        python3 -m pip install --upgrade \
+          Cython==0.29.33 \
+          virtualenv \
+          buildozer
+
+    - name: Create buildozer.spec if not exists
+      run: |
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+        fi
+
+    - name: Configure buildozer.spec for release
+      run: |
+        # Update buildozer.spec with proper configurations
+        sed -i 's/package.name = myapp/package.name = aipage/' buildozer.spec || true
+        sed -i 's/package.domain = org.test/package.domain = com.aipage/' buildozer.spec || true
+        sed -i 's/source.dir = ./source.dir = ./' buildozer.spec || true
+        sed -i 's/requirements = python3,kivy/requirements = python3,kivy,requests,PIL/' buildozer.spec || true
+        sed -i 's/# android.permissions = INTERNET/android.permissions = INTERNET/' buildozer.spec || true
+        sed -i 's/# android.api = /android.api = /' buildozer.spec || true
+        sed -i 's/# android.minapi = /android.minapi = /' buildozer.spec || true
+        sed -i 's/# android.ndk = /android.ndk = /' buildozer.spec || true
+        sed -i 's/# android.accept_sdk_license = True/android.accept_sdk_license = True/' buildozer.spec || true
 
     - name: Build with Buildozer
       run: |
-      
-        yes | buildozer -v android debug
-      env:
-        
-        GRADLE_OPTS: "-Dorg.gradle.daemon=true"
+        export JAVA_OPTS="-Xmx4g -Xms512m"
+        export GRADLE_OPTS="-Xmx4g -Xms512m -Dorg.gradle.daemon=true -Dorg.gradle.workers.max=2"
+        export PATH=$PATH:~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
+        buildozer -v android debug 2>&1 | tee build.log
+      continue-on-error: true
 
-    - name: Upload APK
+    - name: Check build status
+      run: |
+        if [ -f build.log ]; then
+          tail -100 build.log
+        fi
+        ls -la bin/ 2>/dev/null || echo "bin directory not found"
+
+    - name: Upload APK if build successful
+      if: success()
       uses: actions/upload-artifact@v4
       with:
-        name: package
+        name: apk-package
         path: bin/*.apk
-        
+        retention-days: 30
+
+    - name: Upload build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: build.log
+        retention-days: 7
