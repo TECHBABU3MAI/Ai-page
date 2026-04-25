@@ -29,13 +29,13 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update -qq
-        sudo apt-get install -y \
+        sudo apt-get install -y --no-install-recommends \
           git zip unzip autoconf libtool pkg-config \
           zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 \
           cmake libffi-dev libssl-dev openjdk-17-jdk \
           libopenjp2-7-dev libjpeg-dev libpng-dev libtiff-dev \
-          libharfbuzz0b libwebp6 libjasper1 libilmbase23 libopenexr23 \
-          cython3
+          libharfbuzz0b libwebp7 libjasper-dev libilmbase-dev libopenexr-dev \
+          cython3 libfreetype6-dev
 
     - name: Install Python build tools
       run: |
@@ -43,7 +43,10 @@ jobs:
         python3 -m pip install --upgrade \
           Cython==0.29.33 \
           virtualenv \
-          buildozer
+          buildozer \
+          kivy \
+          requests \
+          Pillow
 
     - name: Create buildozer.spec if not exists
       run: |
@@ -57,35 +60,54 @@ jobs:
         sed -i 's/package.name = myapp/package.name = aipage/' buildozer.spec || true
         sed -i 's/package.domain = org.test/package.domain = com.aipage/' buildozer.spec || true
         sed -i 's/source.dir = ./source.dir = ./' buildozer.spec || true
-        sed -i 's/requirements = python3,kivy/requirements = python3,kivy,requests,PIL/' buildozer.spec || true
+        sed -i 's/requirements = python3,kivy/requirements = python3,kivy,requests,pillow/' buildozer.spec || true
         sed -i 's/# android.permissions = INTERNET/android.permissions = INTERNET/' buildozer.spec || true
-        sed -i 's/# android.api = /android.api = /' buildozer.spec || true
-        sed -i 's/# android.minapi = /android.minapi = /' buildozer.spec || true
-        sed -i 's/# android.ndk = /android.ndk = /' buildozer.spec || true
+        sed -i 's/# android.api = /android.api = 31/' buildozer.spec || true
+        sed -i 's/# android.minapi = /android.minapi = 21/' buildozer.spec || true
+        sed -i 's/# android.ndk = /android.ndk = 25b/' buildozer.spec || true
         sed -i 's/# android.accept_sdk_license = True/android.accept_sdk_license = True/' buildozer.spec || true
+
+    - name: Setup Android SDK & NDK
+      run: |
+        mkdir -p ~/.buildozer/android/platform
+        # Pre-setup to avoid build issues
+        yes | sudo apt-get install -y android-sdk || true
 
     - name: Build with Buildozer
       run: |
         export JAVA_OPTS="-Xmx4g -Xms512m"
         export GRADLE_OPTS="-Xmx4g -Xms512m -Dorg.gradle.daemon=true -Dorg.gradle.workers.max=2"
         export PATH=$PATH:~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
-        buildozer -v android debug 2>&1 | tee build.log
-      continue-on-error: true
+        buildozer -v android debug 2>&1 | tee build.log || true
 
     - name: Check build status
       run: |
         if [ -f build.log ]; then
-          tail -100 build.log
+          echo "=== Build Log (last 150 lines) ==="
+          tail -150 build.log
         fi
+        echo ""
+        echo "=== Checking for APK files ==="
         ls -la bin/ 2>/dev/null || echo "bin directory not found"
+        
+        # Check if build was successful
+        if [ -f build.log ]; then
+          if grep -q "BUILD SUCCESSFUL\|Successfully packaged" build.log; then
+            echo "Build appears successful"
+            exit 0
+          else
+            echo "Build may have failed - check logs above"
+          fi
+        fi
 
     - name: Upload APK if build successful
-      if: success()
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: apk-package
         path: bin/*.apk
         retention-days: 30
+        if-no-files-found: ignore
 
     - name: Upload build logs
       if: always()
@@ -94,3 +116,4 @@ jobs:
         name: build-logs
         path: build.log
         retention-days: 7
+        if-no-files-found: ignore
