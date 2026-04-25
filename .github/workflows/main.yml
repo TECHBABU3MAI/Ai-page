@@ -29,6 +29,7 @@ jobs:
       run: |
         sdkmanager --licenses < <(yes)
         sdkmanager "build-tools;33.0.0" "platform-tools" "platforms;android-33"
+        sdkmanager --list | grep build-tools  # Verify installation
 
     - name: Install Python packages
       run: |
@@ -37,7 +38,9 @@ jobs:
     - name: Build with Buildozer
       run: |
         buildozer -v android debug
-      
+      env:
+        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
