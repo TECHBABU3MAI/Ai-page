@@ -115,7 +115,7 @@ fullscreen = 0
 # (int) Android NDK API to use. This is the minimum API your app will support, it should usually match android.minapi.
 #android.ndk_api = 21
 
-# (bool) Use --private data storage (True) or --dir public storage (False)
+# (bool) Use --private data storage (True) or --dir public storage (True)
 #android.private_storage = True
 
 # (str) Android NDK directory (if empty, it will be automatically downloaded.)
@@ -136,7 +136,7 @@ fullscreen = 0
 # agreements. This is intended for automation only. If set to False,
 # the default, you will be shown the license when first running
 # buildozer.
-# android.accept_sdk_license = False
+# android.accept_sdk_license = True
 
 # (str) Android entry point, default is ok for Kivy-based app
 #android.entrypoint = org.kivy.android.PythonActivity
@@ -257,7 +257,7 @@ fullscreen = 0
 
 # (bool) Indicate whether the screen should stay on
 # Don't forget to add the WAKE_LOCK permission if you set this to True
-#android.wakelock = False
+#android.wakelock = True
 
 # (list) Android application meta-data to set (key=value format)
 #android.meta_data =
@@ -273,7 +273,7 @@ fullscreen = 0
 #android.logcat_filters = *:S python:D
 
 # (bool) Android logcat only display log for activity's pid
-#android.logcat_pid_only = False
+#android.logcat_pid_only = True
 
 # (str) Android additional adb arguments
 #android.adb_args = -H host.docker.internal
@@ -293,7 +293,7 @@ android.archs = arm64-v8a, armeabi-v7a
 android.allow_backup = True
 
 # (str) XML file for custom backup rules (see official auto backup documentation)
-# android.backup_rules =
+# android.backup_rules = True
 
 # (str) If you need to insert variables into your AndroidManifest.xml file,
 # you can do so with the manifestPlaceholders property.
@@ -302,7 +302,7 @@ android.allow_backup = True
 # android.manifest_placeholders = [:]
 
 # (bool) Skip byte compile for .py files
-# android.no-byte-compile-python = False
+# android.no-byte-compile-python = True
 
 # (str) The format used to package the app for release mode (aab or apk or aar).
 # android.release_artifact = aab
