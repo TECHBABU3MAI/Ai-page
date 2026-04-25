@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -10,39 +10,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y git zip unzip autoconf libtool libtool-bin m4 pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libncurses-dev cmake libffi-dev libssl-dev
+        sudo apt install -y git zip unzip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        python3 -m pip install --user --upgrade Cython==0.29.33 virtualenv buildozer
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
-
-    - name: Install Android build-tools
+    - name: Accept Android SDK licenses
       run: |
-        sdkmanager --licenses < <(yes)
-        sdkmanager "build-tools;33.0.0" "platform-tools" "platforms;android-33"
-        sdkmanager --list | grep build-tools  # Verify installation
-
-    - name: Install Python packages
-      run: |
-        pip install --user --upgrade buildozer cython virtualenv
+        yes | sdkmanager --licenses || true
 
     - name: Build with Buildozer
-      env:
-        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
       run: |
-        buildozer -v android debug
-        
+        yes | buildozer -v android debug
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: package
         path: bin/*.apk
+        
